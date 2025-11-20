@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,71 +7,60 @@ import {
   StyleSheet,
   TouchableOpacity,
   Alert,
-  Modal,
-  Image,
-  Animated,
-  ImageBackground,
+  PermissionsAndroid,
+  Platform,
 } from 'react-native';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import RNFS from 'react-native-fs';
 import XLSX from 'xlsx';
-
-const logo = require('../asset/icon.png');
-const cardBg = require('../asset/aa.jpg');
-
-const VisitorCard = ({ visitor }) => {
-  const scaleAnim = useRef(new Animated.Value(1)).current;
-
-  const onPressIn = () =>
-    Animated.spring(scaleAnim, { toValue: 1.05, useNativeDriver: true }).start();
-
-  const onPressOut = () =>
-    Animated.spring(scaleAnim, { toValue: 1, friction: 3, useNativeDriver: true }).start();
-
-  return (
-    <Animated.View style={[styles.cardInner, { transform: [{ scale: scaleAnim }] }]}>
-      <ImageBackground source={cardBg} style={styles.cardInner} imageStyle={{ borderRadius: 16 }}>
-        <View style={styles.cardLeft}>
-          <Text style={styles.name}>{visitor.name}</Text>
-          <Text style={styles.details}>{visitor.designation} • {visitor.company}</Text>
-          <Text style={styles.details}>{visitor.email}</Text>
-          <Text style={styles.details}>{visitor.phone}</Text>
-        </View>
-        <Image source={logo} style={styles.logo} resizeMode="contain" />
-      </ImageBackground>
-    </Animated.View>
-  );
-};
+import Share from 'react-native-share';
 
 const VisitorListScreen = () => {
   const [visitors, setVisitors] = useState([]);
   const [searchText, setSearchText] = useState('');
-  const [selectedVisitor, setSelectedVisitor] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedVisitors, setSelectedVisitors] = useState([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectAll, setSelectAll] = useState(false);
-  const [editMode, setEditMode] = useState(false);
-  const [editVisitor, setEditVisitor] = useState(null);
 
-  const fetchVisitors = async () => {
-    try {
-      const res = await axios.get('http://10.0.2.2:3000/api/visitors');
-      setVisitors(res.data.visitors);
-    } catch (e) {
-      Alert.alert('Error', 'Failed to load visitor data');
-    }
-  };
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const storedUser = await AsyncStorage.getItem("user");
+        if (storedUser) {
+          const userObj = JSON.parse(storedUser);
+          setLoggedUser(userObj);
+        }
+      } catch (e) {
+        console.log("AsyncStorage Error:", e);
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
     fetchVisitors();
   }, []);
 
+  const fetchVisitors = async () => {
+    try {
+      const user = JSON.parse(await AsyncStorage.getItem("user"));
+      if (!user || !user.id) {
+        Alert.alert("Error", "User ID not found, please login again!");
+        return;
+      }
+      const res = await axios.get(`http://16.171.188.189:3000/api/visitors/user/${user.id}`);
+      setVisitors(res.data.visitors);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to load visitor data');
+    }
+  };
+
   const filteredVisitors = visitors.filter(v =>
     v.name.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const toggleSelection = (id) => {
+  const toggleSelection = id => {
     let updated;
     if (selectedVisitors.includes(id)) {
       updated = selectedVisitors.filter(i => i !== id);
@@ -96,60 +85,94 @@ const VisitorListScreen = () => {
     }
   };
 
-  const handleDeleteSelected = async () => {
+  async function requestStoragePermission() {
+    if (Platform.OS !== 'android') return true;
     try {
-      await Promise.all(selectedVisitors.map(id =>
-        axios.delete(`http://10.0.2.2:3000/api/visitors/${id}`)
-      ));
-      setVisitors(visitors.filter(v => !selectedVisitors.includes(v.idvisitors)));
-      setSelectedVisitors([]);
-      setSelectionMode(false);
-      setSelectAll(false);
-      Alert.alert('Deleted', 'Selected visitors removed.');
+      if (Platform.Version >= 33) {
+        const res = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_IMAGES,
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_VIDEO,
+          PermissionsAndroid.PERMISSIONS.READ_MEDIA_AUDIO,
+        ]);
+        return (
+          res['android.permission.READ_MEDIA_IMAGES'] === PermissionsAndroid.RESULTS.GRANTED ||
+          res['android.permission.READ_MEDIA_VIDEO'] === PermissionsAndroid.RESULTS.GRANTED ||
+          res['android.permission.READ_MEDIA_AUDIO'] === PermissionsAndroid.RESULTS.GRANTED
+        );
+      } else {
+        const res = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.READ_EXTERNAL_STORAGE,
+          PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+        ]);
+        return (
+          res['android.permission.READ_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED &&
+          res['android.permission.WRITE_EXTERNAL_STORAGE'] === PermissionsAndroid.RESULTS.GRANTED
+        );
+      }
     } catch (e) {
-      Alert.alert('Error', 'Failed to delete selected.');
+      console.log('Permission error:', e);
+      return false;
     }
-  };
+  }
 
-  const handleExport = async () => {
-    const data = visitors.map(v => ({
-      Name: v.name, Email: v.email, Phone: v.phone,
-      Company: v.company, Designation: v.designation
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Visitors');
-    const wbout = XLSX.write(wb, { type: 'binary', bookType: 'xlsx' });
-    const path = `${RNFS.DownloadDirectoryPath}/visitors_export.xlsx`;
-    await RNFS.writeFile(path, wbout, 'ascii');
-    Alert.alert('Exported', `Excel file saved to:\n${path}`);
+  const handleExport = async visitors => {
+    const ok = await requestStoragePermission();
+    if (!ok) {
+      Alert.alert('Permission Denied', 'Please allow file access permission.');
+      return;
+    }
+
+    try {
+      const user = JSON.parse(await AsyncStorage.getItem("user"));
+      const data = visitors.map(v => ({
+        Name: v.name,
+        Email: v.email,
+        Phone: v.phone,
+        Company: v.company,
+        Designation: v.designation,
+        CreatedAt: v.created_at,
+        UserID: user.id,
+        Event: v.program,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Visitors');
+      const wbout = XLSX.write(wb, { type: 'base64', bookType: 'xlsx' });
+
+      const path = `${RNFS.CachesDirectoryPath}/visitors_export.xlsx`;
+      await RNFS.writeFile(path, wbout, 'base64');
+
+      await Share.open({
+        title: 'Exported Visitors',
+        message: 'Here is the visitor data in Excel format.',
+        url: `file://${path}`,
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        showAppsToView: true,
+          failOnCancel: false,
+      });
+    } catch (err) {
+      console.log('Export error:', err);
+      Alert.alert('❌ Failed', 'Error exporting Excel file.');
+    }
   };
 
   const renderVisitor = ({ item }) => {
     const isSelected = selectedVisitors.includes(item.idvisitors);
+
     return (
-      <View style={[styles.cardRow, isSelected && styles.cardSelected]}>
-        <TouchableOpacity onPress={() => toggleSelection(item.idvisitors)} style={styles.checkbox}>
-          <View style={[styles.checkboxBox, isSelected && styles.checkboxChecked]}>
-            {isSelected && <Text style={styles.checkboxTick}>✓</Text>}
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => {
-            if (selectionMode) {
-              toggleSelection(item.idvisitors);
-            } else {
-              setSelectedVisitor(item);
-              setModalVisible(true);
-              setEditMode(false);
-            }
-          }}
-          onLongPress={() => toggleSelection(item.idvisitors)}
-          style={{ flex: 1 }}
-        >
-          <VisitorCard visitor={item} />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        onLongPress={() => toggleSelection(item.idvisitors)}
+        onPress={() => selectionMode && toggleSelection(item.idvisitors)}
+        style={[styles.card, isSelected && styles.cardSelected]}
+      >
+        <View style={styles.cardContent}>
+          <Text style={styles.name}>{item.name}</Text>
+          <Text style={styles.status}>Event: {item.program}</Text>
+          <Text style={styles.contact}>📧 {item.email}</Text>
+          <Text style={styles.contact}>📞 {item.phone}</Text>
+        </View>
+      </TouchableOpacity>
     );
   };
 
@@ -162,122 +185,122 @@ const VisitorListScreen = () => {
         onChangeText={setSearchText}
       />
 
-      {filteredVisitors.length > 0 && (
-        <TouchableOpacity onPress={toggleSelectAll} style={styles.selectAllRow}>
-          <View style={[styles.checkboxBox, selectAll && styles.checkboxChecked]}>
-            {selectAll && <Text style={styles.checkboxTick}>✓</Text>}
-          </View>
-          <Text style={styles.selectAllText}>{selectAll ? 'Unselect All' : 'Select All'}</Text>
-        </TouchableOpacity>
-      )}
+      {/* Export Button above the FlatList */}
+      <TouchableOpacity onPress={() => handleExport(visitors)} style={styles.exportBtn}>
+        <View style={styles.exportGradient}>
+          <Text style={styles.exportText}>📁 Export & Share Excel</Text>
+        </View>
+      </TouchableOpacity>
+
+     
 
       <FlatList
         data={filteredVisitors}
-        keyExtractor={item => item.idvisitors}
+        keyExtractor={item => item.idvisitors.toString()}
         renderItem={renderVisitor}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       />
-
-      <TouchableOpacity onPress={handleExport} style={styles.exportBtn}>
-        <View style={styles.exportGradient}><Text style={styles.exportText}>📁 Export to Excel</Text></View>
-      </TouchableOpacity>
-
-      {selectionMode && (
-        <TouchableOpacity onPress={handleDeleteSelected} style={[styles.exportBtn, { bottom: 80 }]}>
-          <View style={[styles.exportGradient, { backgroundColor: '#ff3b30' }]}>
-            <Text style={styles.exportText}>🗑️ Delete Selected</Text>
-          </View>
-        </TouchableOpacity>
-      )}
-
-      <Modal visible={modalVisible} animationType="slide" transparent onRequestClose={() => setModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            {selectedVisitor && !editMode ? (
-              <>
-                <Text style={styles.modalName}>{selectedVisitor.name}</Text>
-                <Text style={styles.modalDetail}>📧 {selectedVisitor.email}</Text>
-                <Text style={styles.modalDetail}>📞 {selectedVisitor.phone}</Text>
-                <Text style={styles.modalDetail}>🏢 {selectedVisitor.company}</Text>
-                <Text style={styles.modalDetail}>💼 {selectedVisitor.designation}</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setEditVisitor({ ...selectedVisitor });
-                    setEditMode(true);
-                  }}
-                  style={[styles.closeBtn, { backgroundColor: '#1D2671', marginTop: 10 }]}
-                >
-                  <Text style={styles.closeText}> Edit</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <>
-                <Text style={styles.modalName}>Edit Visitor</Text>
-                <TextInput style={styles.search} placeholder="Name" value={editVisitor?.name} onChangeText={text => setEditVisitor({ ...editVisitor, name: text })} />
-                <TextInput style={styles.search} placeholder="Email" value={editVisitor?.email} onChangeText={text => setEditVisitor({ ...editVisitor, email: text })} />
-                <TextInput style={styles.search} placeholder="Phone" value={editVisitor?.phone} onChangeText={text => setEditVisitor({ ...editVisitor, phone: text })} />
-                <TextInput style={styles.search} placeholder="Company" value={editVisitor?.company} onChangeText={text => setEditVisitor({ ...editVisitor, company: text })} />
-                <TextInput style={styles.search} placeholder="Designation" value={editVisitor?.designation} onChangeText={text => setEditVisitor({ ...editVisitor, designation: text })} />
-                <TouchableOpacity
-                  onPress={async () => {
-                    try {
-                      await axios.put(`http://198.168.10.53:3000/api/visitors/${editVisitor.idvisitors}`, editVisitor);
-                      setModalVisible(false);
-                      setEditMode(false);
-                      fetchVisitors();
-                      Alert.alert('Updated', 'Visitor details updated.');
-                    } catch (e) {
-                      Alert.alert('Error', 'Failed to update visitor.');
-                    }
-                  }}
-                  style={[styles.closeBtn, { backgroundColor: '#1D2671', marginTop: 10 }]}
-                >
-                  <Text style={styles.closeText}> Save</Text>
-                </TouchableOpacity>
-              </>
-            )}
-
-            <TouchableOpacity
-              onPress={() => {
-                setModalVisible(false);
-                setEditMode(false);
-              }}
-              style={[styles.closeBtn, { backgroundColor: '#C33764', marginTop: 10 }]}
-            >
-              <Text style={styles.closeText}>Close</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#f2f2f2' },
-  search: { backgroundColor: '#fff', padding: 12, borderRadius: 10, fontSize: 16, marginBottom: 10, elevation: 3 },
-  cardRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12, borderRadius: 16 },
-  cardInner: { flex: 1, padding: 16, borderRadius: 16, backgroundColor: '#fff', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  cardLeft: { flex: 1, marginRight: 10 },
-  logo: { width: 50, height: 50, borderRadius: 8, backgroundColor: '#ffffff88' },
-  name: { fontSize: 20, fontWeight: 'bold', color: '#1D2671' ,alignContent: 'center', textAlign:'center' },
-  details: { fontSize: 16, color: '#1D2671', marginTop: 2 ,alignContent: 'center', textAlign:'center'},
-  exportBtn: { position: 'absolute', bottom: 20, alignSelf: 'center', width: '90%' },
-  exportGradient: { backgroundColor: '#1d4471ff', padding: 14, borderRadius: 10, alignItems: 'center' },
+
+  search: {
+    backgroundColor: '#fff',
+    padding: 12,
+    borderRadius: 10,
+    fontSize: 16,
+    marginBottom: 10,
+    elevation: 3,
+  },
+
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+
+  cardSelected: {
+    backgroundColor: '#e6f2ff',
+  },
+
+  cardContent: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+
+  name: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1D2671',
+  },
+
+  status: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 5,
+  },
+
+  contact: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 3,
+  },
+
+  actionsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingBottom: 15,
+    marginBottom: 10,
+  },
+
+  selectAllBtn: {
+    backgroundColor: '#4CAF50',
+    padding: 10,
+    borderRadius: 10,
+    flex: 1,
+    marginRight: 10,
+  },
+
+  selectAllText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+
+  deleteBtn: {
+    flex: 1,
+    backgroundColor: '#ff3b30',
+    padding: 10,
+    borderRadius: 10,
+  },
+
+  deleteText: {
+    color: '#fff',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+
+  exportBtn: {
+    width: '100%',
+    marginBottom: 10,
+  },
+
+  exportGradient: {
+    backgroundColor: '#f0b820ff',
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+
   exportText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  cardSelected: { backgroundColor: '#e6f2ff' },
-  checkbox: { padding: 6 },
-  checkboxBox: { width: 24, height: 24, borderWidth: 2, borderColor: '#007bff', justifyContent: 'center', alignItems: 'center', borderRadius: 4 },
-  checkboxChecked: { backgroundColor: '#007bff' },
-  checkboxTick: { color: '#fff', fontWeight: 'bold' },
-  selectAllRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
-  selectAllText: { fontSize: 16, marginLeft: 8, color: '#1D2671', fontWeight: '600' },
-  modalOverlay: { flex: 1, backgroundColor: '#000000aa', justifyContent: 'center', alignItems: 'center' },
-  modalBox: { backgroundColor: '#fff', padding: 24, borderRadius: 16, width: '85%', elevation: 5 },
-  modalName: { fontSize: 22, fontWeight: 'bold', marginBottom: 10, color: '#333' },
-  modalDetail: { fontSize: 16, color: '#555', marginBottom: 6 },
-  closeBtn: { marginTop: 10, alignSelf: 'flex-end', backgroundColor: '#C33764', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 },
-  closeText: { color: '#fff', fontWeight: '600' },
 });
 
 export default VisitorListScreen;

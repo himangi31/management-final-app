@@ -27,6 +27,7 @@
     "react-native-reanimated": "^4.0.1",
     "react-native-safe-area-context": "^5.5.2",
     "react-native-screens": "^4.13.1",
+    "react-native-share": "^12.2.0",
     "react-native-svg": "^15.12.1",
     "react-native-text-recognition": "^1.0.2",
     "react-native-worklets": "^0.4.1",

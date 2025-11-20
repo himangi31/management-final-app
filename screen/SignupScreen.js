@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import axios from 'axios';
 
-const bgImage = require('../asset/oo.jpg');
+
 
 export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -19,7 +19,7 @@ export default function SignupScreen({ navigation }) {
 
   const handleSignup = async () => {
     try {
-      const res = await axios.post('http://10.0.2.2:3000/api/visitors/signup', {
+      const res = await axios.post('http://16.171.188.189:3000/api/visitors/signup', {
         email,
         password,
       });
@@ -42,7 +42,7 @@ export default function SignupScreen({ navigation }) {
   };
 
   return (
-    <ImageBackground source={bgImage} style={styles.background} resizeMode="cover">
+    <ImageBackground style={styles.background} resizeMode="cover">
       <SafeAreaView style={styles.container}>
         <Text style={styles.header}>Hello{'\n'} Admin Sign up!</Text>
 
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   header: {
-    color: '#0071EB',
+    color: '#dbeb00ff',
     fontSize: 32,
     fontWeight: 'bold',
     marginTop: 60,
@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   button: {
-    backgroundColor: '#0071EB',
+    backgroundColor: '#0b0c04ff',
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: 'center',

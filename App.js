@@ -1,8 +1,8 @@
 import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { View, Text, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+import { NavigationContainer, useRoute } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LinearGradient from 'react-native-linear-gradient';
-import { TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
 
 import LoginScreen from './screen/LoginScreen';
 import SignupScreen from './screen/SignupScreen';
@@ -17,8 +17,32 @@ import SignupUser from './screen/SignUpUser';
 import UserDetail from './screen/UserDetail';
 import FrontPage from './screen/FrontPage';
 import AdminHome from './screen/AdminHome';
-
+import Push from './screen/Push';
+import BottomNav from './screen/BottomNav'; // adjust path if needed
+import UserSidebar from './screen/UserSidebar';
+import AdminVisitor from './screen/AdminVisitor';
+import AdminStat from './screen/AdminStat';
+import Profile from './screen/Profile';
 const Stack = createNativeStackNavigator();
+
+// Wrapper component to show BottomNav only on selected screens
+const ScreenWrapper = ({ children }) => {
+  const route = useRoute();
+  const screensWithBottomNav = [
+    'VisitorList',
+    'AddEvent',
+    'EventStats',
+    'UserDetails',
+    'EnterCard', 
+  ];
+  const showBottomNav = screensWithBottomNav.includes(route.name);
+  return (
+    <View style={{ flex: 1 }}>
+      {children}
+      {showBottomNav && <BottomNav />}
+    </View>
+  );
+};
 
 export default function App() {
   const handleLogout = (navigation) => {
@@ -28,13 +52,6 @@ export default function App() {
     ]);
   };
 
-  const gradientHeader = () => (
-    <LinearGradient
-      colors={['#0046BF', '#0071EB']}
-      style={StyleSheet.absoluteFill}  // yeh header ko proper cover karega
-    />
-  );
-
   const logoutButton = (navigation) => (
     <TouchableOpacity onPress={() => handleLogout(navigation)}>
       <Text style={styles.logoutText}>Logout</Text>
@@ -43,41 +60,86 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator
-        initialRouteName="Front"
-        screenOptions={{
-          headerTintColor: '#fff',
-          headerTitleStyle: { fontWeight: 'bold', fontSize: 20 },
-          headerBackTitleVisible: false,
-          headerBackground: gradientHeader,
-        }}
-      >
-        <Stack.Screen name="Front" component={FrontPage} options={{ headerShown: false }} />
+      <Stack.Navigator initialRouteName="Front">
+        <Stack.Screen
+          name="Front"
+          component={FrontPage}
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Userlog" component={UserLogin} />
         <Stack.Screen name="Usersign" component={SignupUser} />
         <Stack.Screen
           name="Adminhome"
-          component={AdminHome}
           options={({ navigation }) => ({
             title: 'Home',
             headerRight: () => logoutButton(navigation),
           })}
-        />
+        >
+          {(props) => <AdminHome {...props} />}
+        </Stack.Screen>
         <Stack.Screen
           name="Home"
-          component={HomeScreen}
           options={({ navigation }) => ({
             title: 'Home',
             headerRight: () => logoutButton(navigation),
           })}
-        />
-        <Stack.Screen name="EnterCard" component={ManualEntryScreen} options={{ title: 'Manual Entry' }} />
-        <Stack.Screen name="UserDetails" component={UserDetail} />
+        >
+          {(props) => <HomeScreen {...props} />}
+        </Stack.Screen>
+        <Stack.Screen
+  name="EnterCard"
+>
+  {(props) => (
+    <ScreenWrapper>
+      <ManualEntryScreen {...props} />
+    </ScreenWrapper>
+  )}
+</Stack.Screen>
+
+        <Stack.Screen
+          name="UserDetails"
+        >
+          {(props) => (
+            <ScreenWrapper>
+              <UserDetail {...props} />
+            </ScreenWrapper>
+          )}
+        </Stack.Screen>
         <Stack.Screen name="ScanCard" component={ScanCardScreen} />
-        <Stack.Screen name="VisitorList" component={VisitorListScreen} />
-        <Stack.Screen name="ProgramStats" component={ProgramStatsScreen} />
-        <Stack.Screen name="AddProgram" component={AddProgramScreen} />
+         <Stack.Screen name="User" component={UserSidebar} />
+          <Stack.Screen name="AdminStat" component={AdminStat} />
+         <Stack.Screen name="AdminVisitor" component={AdminVisitor} />
+        <Stack.Screen name="Notification" component={Push} />
+        <Stack.Screen name="Profile" component={Profile} />
+
+        <Stack.Screen
+          name="VisitorList"
+        >
+          {(props) => (
+            <ScreenWrapper>
+              <VisitorListScreen {...props} />
+            </ScreenWrapper>
+          )}
+        </Stack.Screen>
+        <Stack.Screen
+          name="EventStats"
+        >
+          {(props) => (
+            <ScreenWrapper>
+              <ProgramStatsScreen {...props} />
+            </ScreenWrapper>
+          )}
+        </Stack.Screen>
+        <Stack.Screen
+          name="AddEvent"
+        >
+          {(props) => (
+            <ScreenWrapper>
+              <AddProgramScreen {...props} />
+            </ScreenWrapper>
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );

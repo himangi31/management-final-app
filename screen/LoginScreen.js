@@ -6,43 +6,52 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  SafeAreaView,
-  ImageBackground,
-  Dimensions,
+  SafeAreaView,Image
 } from 'react-native';
 import axios from 'axios';
-const { width } = Dimensions.get('window');
-const bgImage = require('../asset/oo.jpg'); // ✅ Ensure path is correct
+import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
 
-export default function LoginScreen({ navigation }) {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const navigation = useNavigation();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password');
+      Alert.alert('Error', 'Please enter email and password');
       return;
     }
-     console.log("Trying login with:", email, password);
-    try {
-      const res = await axios.post('http://10.0.2.2:3000/api/visitors/login'
-, { email, password });
 
+    setLoading(true);
+    try {
+      const res = await axios.post(
+        'http://16.171.188.189:3000/api/visitors/login',
+        { email, password },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
 
       if (res.data.success) {
-       // Alert.alert('Success', res.data.message);
-        navigation.navigate('Adminhome');
+        navigation.replace('Adminhome'); // Navigate to the home screen after successful login
+      } else {
+        Alert.alert('Login Failed', res.data.message);
       }
     } catch (err) {
+      console.log('Login error:', err);
       Alert.alert('Login Failed', err.response?.data?.message || 'Server error');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <ImageBackground source={bgImage} style={styles.background} resizeMode="cover">
+    <LinearGradient colors={['#FFF7C9', '#FFE58A']} style={styles.background}>
       <SafeAreaView style={styles.container}>
-        <Text style={styles.header}>Welcome Back{'\n'}Admin Log in!</Text>
+        
+        <Text style={styles.header}>Welcome {'\n'}BPE Admin</Text>
+        <Text style={styles.subHeader}>Please Sign in to continue</Text>
 
         <View style={styles.formBox}>
           <TextInput
@@ -51,23 +60,28 @@ export default function LoginScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             style={styles.input}
-            keyboardType="email-address"
             autoCapitalize="none"
+            keyboardType="email-address"
           />
 
-          <View style={styles.passwordContainer}>
+          <View style={{ position: 'relative' }}>
             <TextInput
               placeholder="Password"
               placeholderTextColor="#999"
               secureTextEntry={!showPass}
               value={password}
               onChangeText={setPassword}
-              style={[styles.input, { flex: 1, marginBottom: 0 }]}
+              style={styles.input}
             />
-            <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-              <Text style={{ fontSize: 18, paddingHorizontal: 10,color: '#000' }}>
-    {showPass ? '🙈' : '👁️'}
-  </Text>
+            <TouchableOpacity
+              onPress={() => setShowPass(!showPass)}
+              style={{
+                position: 'absolute',
+                right: 20,
+                top: 15,
+              }}
+            >
+              <Text style={{ fontSize: 18 }}>{showPass ? '🙈' : '👁️'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -75,10 +89,15 @@ export default function LoginScreen({ navigation }) {
             <Text style={styles.forgot}>Don't have an account?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleLogin}>
-            <View style={styles.button}>
-              <Text style={styles.buttonText}>LOG IN</Text>
-            </View>
+          <TouchableOpacity onPress={handleLogin} disabled={loading}>
+            <LinearGradient
+              colors={['#FFD84D', '#FFC700']}
+              style={[styles.button, loading && { opacity: 0.5 }]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'LOG IN'}</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.bottomText}>
@@ -89,7 +108,7 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
@@ -101,14 +120,21 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 20,
+    marginBottom:230,
   },
   header: {
-    color: '#0071EB',
+    color: '#010b16ff',
     fontSize: 32,
     fontWeight: 'bold',
-    marginTop: 60,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  subHeader: {
+    color: '#777',
+    fontSize: 16,
+    textAlign: 'center',
     marginBottom: 30,
   },
   formBox: {
@@ -120,19 +146,13 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#ccc',
     marginBottom: 20,
     fontSize: 16,
-    paddingHorizontal: 5,
-    color: '#000'
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
-    marginBottom: 20,
+    paddingHorizontal: 15,
+    color: '#000',
   },
   forgotWrap: {
     alignItems: 'flex-end',
@@ -143,7 +163,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   button: {
-    backgroundColor: '#0071EB',
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: 'center',
@@ -159,7 +178,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 10,
   },
-
-
 });
- 

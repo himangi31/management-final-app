@@ -1,95 +1,105 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  SafeAreaView,
-  ImageBackground,
-} from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, SafeAreaView ,Image} from 'react-native';
 import axios from 'axios';
-import { useEffect } from 'react';
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const bgImage = require('../asset/oo.jpg'); // Ensure path is correct
+import LinearGradient from 'react-native-linear-gradient';
 
 export default function UserLogin({ navigation }) {
-  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [userName, setUserName] = useState('');
-const [showPass, setShowPass] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+const handleLogin = async () => {
+  if (!email || !password) {
+    Alert.alert('Error', 'Please enter email and password');
+    return;
+  }
 
-  const handleLogin = async () => {
-    if (!emailOrPhone || !password) {
-      Alert.alert('Error', 'Please enter email/phone and password');
-      return;
+  setLoading(true);
+  try {
+    const res = await axios.post(
+      'http://16.171.188.189:3000/api/visitors/userlogin',
+      { email, password },
+      { headers: { 'Content-Type': 'application/json' } }
+    );
+
+    if (res.data.success) {
+      // 👇 YAHI EXACT Sahi Jagah Hai
+      await AsyncStorage.setItem('user', JSON.stringify(res.data.user));
+
+      console.log("LOGIN USER SAVED:", res.data.user);
+
+      navigation.replace('Home', { email: res.data.user.email });
+    } else {
+      Alert.alert('Login Failed', res.data.message);
     }
+  } catch (err) {
+    console.log('Login error:', err);
+    Alert.alert('Login Failed', err.response?.data?.message || 'Server error');
+  } finally {
+    setLoading(false);
+  }
+};
 
-    setLoading(true);
-    try {
-      const res = await axios.post('http://10.0.2.2:3000/api/visitors/userlogin', {
-        emailOrPhone,
-        password,
-      });
-
-      if (res.data.success) {
-        await AsyncStorage.setItem('user', JSON.stringify(res.data.user)); // storing user info
-        navigation.replace('Home', { email: res.data.user.email });
-      } else {
-        Alert.alert('Login Failed', res.data.message);
-      }
-    } catch (err) {
-      console.log('Login error:', err);
-      Alert.alert('Login Failed', err.response?.data?.message || 'Server error');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
-    <ImageBackground source={bgImage} style={styles.background} resizeMode="cover">
+    <LinearGradient colors={['#FFF7C9', '#FFE58A']} style={styles.background}>
+       <Image 
+  source={require('../asset/logo.png')}   // ← अपनी file location के हिसाब से change कर लेना
+  style={styles.logo}
+/>
+
       <SafeAreaView style={styles.container}>
-        <Text style={styles.header}>Welcome Back{'\n'} User Log in!</Text>
+        
+        <Text style={styles.header}>Login</Text>
+        <Text style={styles.subHeader}>Please Sign in to continue</Text>
 
         <View style={styles.formBox}>
           <TextInput
-            placeholder="Email or Phone"
+            placeholder="Email"
             placeholderTextColor="#999"
-            value={emailOrPhone}
-            onChangeText={setEmailOrPhone}
+            value={email}
+            onChangeText={setEmail}
             style={styles.input}
             autoCapitalize="none"
+            keyboardType="email-address"
           />
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#ccc', marginBottom: 20 }}>
+       <View style={{ position: "relative" }}>
   <TextInput
     placeholder="Password"
     placeholderTextColor="#999"
     secureTextEntry={!showPass}
     value={password}
     onChangeText={setPassword}
-    style={{ flex: 1, height: 50, fontSize: 16, paddingHorizontal: 5 }}
+    style={styles.input}
   />
-  <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-    <Text style={{ fontSize: 18, paddingHorizontal: 10, color: '#000' }}>
-      {showPass ? '🙈' : '👁️'}
-    </Text>
+  <TouchableOpacity
+    onPress={() => setShowPass(!showPass)}
+    style={{
+      position: "absolute",
+      right: 20,
+      top: 15
+    }}
+  >
+    <Text style={{ fontSize: 18 }}>{showPass ? "🙈" : "👁️"}</Text>
   </TouchableOpacity>
 </View>
 
-            
-          <TouchableOpacity style={styles.forgotWrap} onPress={() => navigation.navigate('Usersign')}>
-            <Text style={styles.forgot}>Don't have an account?</Text>
+
+          <TouchableOpacity style={styles.forgotWrap} onPress={() => navigation.navigate('')}>
+            <Text style={styles.forgot}>Forgot Password?</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={handleLogin} disabled={loading}>
-            <View style={[styles.button, loading && { opacity: 0.5 }]}>
+            <LinearGradient
+              colors={['#FFD84D', '#FFC700']}
+              style={[styles.button, loading && { opacity: 0.5 }]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
               <Text style={styles.buttonText}>{loading ? 'Logging in...' : 'LOG IN'}</Text>
-            </View>
+            </LinearGradient>
           </TouchableOpacity>
 
           <View style={styles.bottomText}>
@@ -98,9 +108,17 @@ const [showPass, setShowPass] = useState(false);
               <Text style={{ fontWeight: 'bold', color: '#460066' }}>Sign up</Text>
             </TouchableOpacity>
           </View>
+
+          {/* 🔥 Admin Login Button Added */}
+          <View style={styles.adminWrap}>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
+              <Text style={styles.adminText}>🔐 Admin Login</Text>
+            </TouchableOpacity>
+          </View>
+
         </View>
       </SafeAreaView>
-    </ImageBackground>
+    </LinearGradient>
   );
 }
 
@@ -112,14 +130,21 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
     paddingHorizontal: 20,
+    marginBottom:230,
   },
   header: {
-    color: '#0071EB',
+    color: '#010b16ff',
     fontSize: 32,
     fontWeight: 'bold',
-    marginTop: 60,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  subHeader: {
+    color: '#777',
+    fontSize: 16,
+    textAlign: 'center',
     marginBottom: 30,
   },
   formBox: {
@@ -131,11 +156,27 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    marginBottom: 20,
+    fontSize: 16,
+    paddingHorizontal: 15,
+    color: '#000',
+  },
+  passwordWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
     marginBottom: 20,
-    fontSize: 16,
-    paddingHorizontal: 5,
+  },
+  showPasswordIcon: {
+    paddingLeft: 10,
+  },
+  showPasswordText: {
+    fontSize: 18,
+    color: '#000',
   },
   forgotWrap: {
     alignItems: 'flex-end',
@@ -146,7 +187,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   button: {
-    backgroundColor: '#0071EB',
     borderRadius: 25,
     paddingVertical: 12,
     alignItems: 'center',
@@ -161,5 +201,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 10,
+  },
+logo: {
+  width: 240,
+  height: 100,
+  alignSelf: 'center',
+  marginBottom: 2,
+  resizeMode: 'contain',
+},
+
+  /* 🔥 Admin Button Styles */
+  adminWrap: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  adminText: {
+    fontSize: 15,
+    color: '#000',
+    fontWeight: 'bold',
+    textDecorationLine: 'underline',
   },
 });

@@ -1,238 +1,309 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,Alert,
-  ImageBackground,
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+  Image,
+  ScrollView,
+  Dimensions,
+  SafeAreaView,
+  Alert,
+  FlatList,
+} from "react-native";
+import axios from 'axios';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+const { width } = Dimensions.get("window");
 
-import * as Animatable from 'react-native-animatable';
 
 const AdminHome = ({ navigation }) => {
-  const handleLogout = () => {    Alert.alert('Logged Out', 'You have been successfully logged out.');
-    navigation.replace('Login');
-  };
+  const bannerRef = useRef(null);
+  const [currentIndex, setCurrentIndex] = useState(0);
 
-  let scanButtonRef = null;
-  let enterCardRef = null;
-  let listRef = null;
+  const banners = [{ image: require("../asset/logo.png") }]; // Banner image
 
-  const handleScanPress = () => {
-    if (scanButtonRef) {
-      scanButtonRef.pulse(200).then(() => {
-        navigation.navigate('ScanCard');
-      });
-    } else {
-      navigation.navigate('ScanCard');
-    }
-  };
+  const [total, setTotal] = useState(0);
+  const [userName, setUserName] = useState("Admin");
 
-  const handlecard = () => {
-    if (enterCardRef) {
-      enterCardRef.pulse(200).then(() => {
-        navigation.navigate('EnterCard');
-      });
-    } else {
-      navigation.navigate('EnterCard');
-    }
-  };
+  // Auto-slide banners
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextIndex = (currentIndex + 1) % banners.length;
+      setCurrentIndex(nextIndex);
+      bannerRef.current?.scrollToIndex({ index: nextIndex, animated: true });
+    }, 3000);
 
-  const handleList = () => {
-    if (listRef) {
-      listRef.pulse(200).then(() => {
-        navigation.navigate('VisitorList');
-      });
-    } else {
-      navigation.navigate('VisitorList');
-    }
+    return () => clearInterval(interval);
+  }, [currentIndex]);
+
+    useEffect(() => {
+    axios
+      .get(`http://16.171.188.189:3000/api/visitors/total`)
+      .then((res) => {
+        if (res.data.success) {
+          setTotal(res.data.total); // Update state with total count
+        }
+      })
+      .catch((err) => console.error("Error fetching total visitors:", err));
+  }, []);
+
+  const handleLogout = () => {
+    Alert.alert("Logout", "Are you sure?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Logout", onPress: () => navigation.replace("Login") },
+    ]);
   };
 
   return (
-    <ImageBackground
-      source={require('../asset/doc.jpg')}
-      resizeMode="cover"
-      style={styles.backgroundImage}
-    >
-      <SafeAreaView style={styles.safeArea}>
-      
-        <View style={styles.topBar}>
-          <Animatable.Text animation="fadeInDown" duration={1500} style={styles.topWelcome}>
-          </Animatable.Text>
-          <TouchableOpacity onPress={() => Alert.alert('Profile', 'Profile screen coming soon')}>
-            <Text style={styles.emojiIcon}> </Text>
-          </TouchableOpacity>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
+        {/* HEADER */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.welcomeText}>Welcome,</Text>
+            <Text style={styles.userName}>{userName}</Text>
+          </View>
+
+         <TouchableOpacity style={styles.profileCircle} onPress={handleLogout}>
+  <Text style={{ fontSize: 20 }}>👤</Text>
+</TouchableOpacity>
+
         </View>
 
-        {/* Main Area */}
-        <View style={styles.innerContainer}>
-          <Animatable.Text animation="zoomIn" delay={300} style={styles.heading}>
-            Welcome !
-          </Animatable.Text>
-            
-               <TouchableOpacity onPress={() => navigation.navigate('UserDetails')}>
-            <Animatable.View
-              animation="slideInUp"
-              delay={400}
-              duration={700}
-              style={styles.animatedButton}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>Registered User</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
+        {/* Banner Slider */}
+        <FlatList
+          ref={bannerRef}
+          data={banners}
+          keyExtractor={(item, index) => index.toString()}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          style={{ marginTop: 10 }}
+          renderItem={({ item }) => (
+            <Image source={item.image} style={styles.banner} height={40} />
+          )}
+        />
 
-
-          <TouchableOpacity onPress={() => navigation.navigate('ProgramStats')}>
-            <Animatable.View
-              animation="slideInUp"
-              delay={400}
-              duration={700}
-              style={styles.animatedButton}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>View Statistics</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleScanPress}>
-            <Animatable.View
-              ref={(ref) => (scanButtonRef = ref)}
-              animation="slideInUp"
-              delay={500}
-              duration={700}
-              style={styles.animatedButton}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>Scan Visiting Card</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handlecard}>
-            <Animatable.View
-              ref={(ref) => (enterCardRef = ref)}
-              animation="slideInUp"
-              delay={600}
-              duration={700}
-              style={styles.animatedButton}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>Enter Visitor</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={handleList}>
-            <Animatable.View
-              ref={(ref) => (listRef = ref)}
-              animation="slideInUp"
-              delay={700}
-              duration={700}
-              style={styles.animatedButton}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>Preview Visitors</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
-
-         
+        {/* Visitors Card */}
+        <View style={styles.totalCard}>
+          <Text style={styles.totalVisitorsLabel}>Total Visitors</Text>
+          <Text style={styles.totalVisitorsNumber}>{total}</Text>
         </View>
-      </SafeAreaView>
-    </ImageBackground>
+
+        {/* Main Actions */}
+        <Text style={styles.sectionTitle}>Main Actions</Text>
+
+        <View style={styles.actionGrid}>
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => navigation.navigate("UserDetails")}
+          >
+            <Text style={styles.actionText}>Sales User</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => navigation.navigate("Adminstat")}
+          >
+            <Text style={styles.actionText}>View Statistics</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => navigation.navigate("ScanCard")}
+          >
+            <Text style={styles.actionText}>Scan Visiting Card</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => navigation.navigate("AddEvent")}
+          >
+            <Text style={styles.actionText}>Add event</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionBox}
+            onPress={() => navigation.navigate("AdminVisitor")}
+          >
+            <Text style={styles.actionText}>Preview Visitors</Text>
+          </TouchableOpacity>
+
+              <TouchableOpacity
+  style={styles.actionBox}
+  onPress={() => navigation.navigate("Profile")}
+>
+  <Text style={styles.actionText}>Profile</Text>
+</TouchableOpacity>
+
+        </View>
+      </ScrollView>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity onPress={() => navigation.navigate("AdminHome")}>
+          <Text style={styles.navItem}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("AdminStat")}>
+          <Text style={styles.navItem}>Stats</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.centerButton}
+          onPress={() => navigation.navigate("ScanCard")}
+        >
+          <Text style={styles.plusIcon}>+</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={() => navigation.navigate("VisitorList")}>
+          <Text style={styles.navItem}>Visitors</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.navItem}>Logout</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 };
 
+export default AdminHome;
+
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
   safeArea: {
     flex: 1,
+    backgroundColor: "#f8f8f8",
   },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
     paddingHorizontal: 20,
-    paddingTop: 110,
-    marginBottom: 10,
+    alignItems: "center",
   },
-  emojiIcon: {
-    fontSize: 32,
-    marginRight: 5,
+
+  welcomeText: {
+    fontSize: 16,
+    color: "#555",
   },
-  topWelcome: {
-    fontSize: 28,
-    fontWeight: '600',
-    color: '#093FB4',
+
+  userName: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#000",
   },
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    marginBottom:180,
+
+  profileCircle: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#eaeaea",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#093FB4',
+
+  banner: {
+    width: width * 0.95,
+    height: 170,
+    borderRadius: 14,
+    marginHorizontal: 10,
   },
-  animatedButton: {
-    borderRadius: 10,
-    overflow: 'hidden',
+
+  totalCard: {
+    width: width * 0.9,
+    height: 100,
+    backgroundColor: "#f9d853a6",
+    alignSelf: "center",
+    borderRadius: 16,
+    paddingVertical: 25,
+    marginTop: 15,
+    alignItems: "center",
   },
-  button: {
-    padding: 14,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 250,
-    elevation: 8,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
+
+  totalVisitorsLabel: {
+    fontSize: 16,
+    color: "#222",
+    fontWeight: "600",
   },
-  buttonText: {
-    color: '#fcfcfdff',
+
+  totalVisitorsNumber: {
+    fontSize: 40,
+    fontWeight: "900",
+    color: "#000",
+    marginTop: 0,
+  },
+
+  sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
+    color: "#222",
+    marginLeft: 22,
+    marginTop: 25,
   },
-  logoutButton: {
-    marginTop: 170,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    backgroundColor: '#1756dfee',
-    borderRadius: 30,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+
+  actionGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    width: width * 0.9,
+    alignSelf: "center",
+    justifyContent: "space-between",
+    marginTop: 10,
+  },
+
+  actionBox: {
+    width: "48%",
+    backgroundColor: "#fff",
+    height: 90,
+    borderRadius: 14,
+    justifyContent: "center",
+    alignItems: "center",
+    marginVertical: 10,
     elevation: 3,
   },
-  logoutText: {
-    color: '#f3f0f0ff',
-    fontWeight: '1000',
-    fontSize: 16,
-    letterSpacing: 0.5,
-    fontStyle: 'bold',
+
+  actionText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#333",
+    textAlign: "center",
+  },
+
+  bottomNav: {
+    position: "absolute",
+    bottom: 50,
+    width: "92%",
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    height: 75,
+    borderRadius: 40,
+    justifyContent: "space-around",
+    alignItems: "center",
+    alignSelf: "center",
+    elevation: 10,
+  },
+
+  navItem: {
+    fontSize: 14,
+    color: "#444",
+    fontWeight: "600",
+  },
+
+  centerButton: {
+    width: 65,
+    height: 65,
+    backgroundColor: "#FFC840",
+    borderRadius: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -32,
+    elevation: 10,
+  },
+
+  plusIcon: {
+    fontSize: 34,
+    color: "#000",
+    fontWeight: "800",
   },
 });
-
-export default AdminHome;

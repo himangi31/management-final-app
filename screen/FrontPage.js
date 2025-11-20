@@ -1,173 +1,160 @@
 import React, { useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ImageBackground,
-  Dimensions
-} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 
 const { width, height } = Dimensions.get('window');
 
 const FrontPage = ({ navigation }) => {
-  const adminButtonRef = useRef(null);
-  const userButtonRef = useRef(null);
+  const btnRef = useRef(null);
 
-  const handleAdminPress = () => {
-    adminButtonRef.current?.pulse(500);
-    setTimeout(() => navigation.navigate('Login'), 300);
-  };
-
-  const handleUserPress = () => {
-    userButtonRef.current?.pulse(500);
+  const handlePress = () => {
+    btnRef.current?.pulse(500);
     setTimeout(() => navigation.navigate('Userlog'), 300);
   };
 
   return (
-    <ImageBackground
-      source={require('../asset/doc.jpg')}
-      resizeMode="cover"
-      style={styles.backgroundImage}
-    >
-      {/* Animated Gradient Layer 1 */}
-      <Animatable.View
-        animation={{
-          0: { translateX: -width },
-          1: { translateX: width },
-        }}
-        iterationCount="infinite"
-        duration={9000}
-        style={styles.animatedOverlayLeft}
-      >
-        <LinearGradient
-          colors={['rgba(219, 205, 205, 0.15)', 'rgba(228, 230, 231, 0.25)', 'rgba(231, 233, 238, 0.1)']}
-          start={{ x: 0, y: 1 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.gradientOverlay}
-        />
-      </Animatable.View>
+    <SafeAreaView style={styles.container}>
+      {/* ---------- TOP LEFT SHAPES ---------- */}
+      <View style={styles.topCircleGreen}></View>
+      <View style={styles.topCircleYellow}></View>
 
-      {/* Animated Gradient Layer 2 (delay for wave effect) */}
-      <Animatable.View
-        animation={{
-          0: { translateX: width },
-          1: { translateX: -width },
-        }}
-        iterationCount="infinite"
-        duration={12000}
-        delay={3000}
-        style={styles.animatedOverlayRight}
-      >
-        <LinearGradient
-          colors={['rgba(219, 205, 205, 0.15)', 'rgba(228, 230, 231, 0.25)', 'rgba(231, 233, 238, 0.1)']}
-         start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
-          style={styles.gradientOverlay}
-        />
-      </Animatable.View>
+      {/* ---------- MAIN CONTENT ---------- */}
+      
+      <View style={styles.centerContent}>
+      <Animatable.Image
+  animation="pulse"
+  iterationCount="infinite"
+  easing="linear"       // linear → smooth blink
+  duration={500}        // fast
+  source={require('../asset/logo.png')}
+  style={styles.topLogo}
+/>
 
-      <View style={styles.container}>
-        <Animatable.Text animation="fadeInDown" style={styles.welcomeText}>
-          Welcome to Visitor App
+
+        <Animatable.Image
+          animation="fadeInDown"
+          duration={900}
+          source={require('../asset/a.png')}
+          style={styles.locationIcon}
+        />
+
+        <Animatable.Text animation="fadeInUp" delay={200} style={styles.title}>
+          BPE Konnect
         </Animatable.Text>
 
-        <View style={styles.buttonContainer}>
-          <TouchableOpacity onPress={handleAdminPress} activeOpacity={0.8}>
-            <Animatable.View
-              ref={adminButtonRef}
-              animation={{
-                0: { translateY: 0 },
-                0.5: { translateY: -5 },
-                1: { translateY: 0 },
-              }}
-              iterationCount="infinite"
-              duration={2000}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>Admin Login</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
+        {/* BUTTON */}
+        <TouchableOpacity onPress={handlePress} activeOpacity={0.85}>
+          <Animatable.View ref={btnRef}  iterationCount="infinite">
+            <View style={styles.button}>
+              <Text style={styles.buttonText}>Get Started</Text>
+            </View>
+          </Animatable.View>
+        </TouchableOpacity>
 
-          <TouchableOpacity onPress={handleUserPress} activeOpacity={0.8}>
-            <Animatable.View
-              ref={userButtonRef}
-              animation={{
-                0: { translateY: 0 },
-                0.5: { translateY: -5 },
-                1: { translateY: 0 },
-              }}
-              iterationCount="infinite"
-              duration={2200}
-            >
-              <LinearGradient colors={['#0046BF', '#0071EB']} style={styles.button}>
-                <Text style={styles.buttonText}>User Login</Text>
-              </LinearGradient>
-            </Animatable.View>
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.laterText}>click here</Text>
       </View>
-    </ImageBackground>
+
+      {/* ---------- BOTTOM SHAPES ---------- */}
+      <View style={styles.bottomCircleGreen}></View>
+      <View style={styles.bottomCircleYellow}></View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  backgroundImage: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  animatedOverlayLeft: {
-  ...StyleSheet.absoluteFillObject,
-  left: -width, // Start off-screen from the left
-},
-
-animatedOverlayRight: {
-  ...StyleSheet.absoluteFillObject,
-  right: -width, // Start off-screen from the right
-},
-
-  gradientOverlay: {
-    width: width * 2,
-    height: height,
-  },
   container: {
     flex: 1,
+    backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  topLogo: {
+  width: 230,
+  height: 70,
+  // optional, if you want to tint
+},
+
+
+  /* TOP LEFT SHAPES */
+  topCircleGreen: {
+    position: 'absolute',
+    width: width * 0.5,
+    height: width * 0.5,
+    backgroundColor: '#6CD067',
+    borderRadius: width * 0.25,
+    top: -width * 0.15,
+    left: -width * 0.1,
+  },
+  topCircleYellow: {
+    position: 'absolute',
+    width: width * 0.35,
+    height: width * 0.35,
+    backgroundColor: '#FFD257',
+    borderRadius: width * 0.175,
+    top: width * 0.05,
+    left: -width * 0.15,
+  },
+
+  /* BOTTOM RIGHT SHAPES */
+  bottomCircleGreen: {
+    position: 'absolute',
+    width: width * 0.45,
+    height: width * 0.45,
+    backgroundColor: '#6CD067',
+    borderRadius: width * 0.225,
+    bottom: -width * 0.15,
+    right: -width * 0.1,
+  },
+  bottomCircleYellow: {
+    position: 'absolute',
+    width: width * 0.35,
+    height: width * 0.35,
+    backgroundColor: '#FFD257',
+    borderRadius: width * 0.175,
+    bottom: width * 0.05,
+    right: -width * 0.15,
+  },
+
+  centerContent: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
+    paddingBottom: 40, // ensures button is above home bar
   },
-  welcomeText: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#093FB4',
-    marginBottom: 40,
-    textAlign: 'center',
+
+  locationIcon: {
+    width: 65,
+    height: 65,
+    marginBottom: 25,
+    tintColor: '#000',
   },
-  buttonContainer: {
-    width: '100%',
-    alignItems: 'center',
-    gap: 20,
+
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 10,
   },
+
   button: {
-    padding: 14,
+    backgroundColor: '#6CD067',
+    paddingVertical: 14,
+    paddingHorizontal: 90,
     borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 250,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 5,
+    elevation: 4,
+    marginTop: 20,
   },
+
   buttonText: {
-    color: '#ffffff',
     fontSize: 18,
     fontWeight: '700',
+    color: '#fff',
+  },
+
+  laterText: {
+    marginTop: 18,
+    fontSize: 15,
+    color: '#444',
   },
 });
 
